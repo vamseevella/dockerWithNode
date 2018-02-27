@@ -8,9 +8,13 @@ const HOST = '0.0.0.0';
 
 // App
 const app = express();
-// app.get('/', (req, res) => {
-//     res.send('Hello world\n');
-// });
+
+app.use(function (req, res, done) {
+    if (req.query.user === 'vamsee' && req.query.pwd === 'pwd')
+        done();
+    else
+        res.send('u r not authonticated\n');
+});
 app.get('/', function (req, res) {
     res.send('Hello world\n');
 });
