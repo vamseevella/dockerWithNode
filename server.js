@@ -1,23 +1,109 @@
-'use strict';
+var express = require('express');
+var cors = require('cors');
+var morgon = require('morgan');
+var bodyparser = require('body-parser');
+var mongojs = require('mongojs');
+var jwt = require('jsonwebtoken');
+var app = express();
+app.use(cors());
 
-const express = require('express');
+app.set('secretKey', '12<345678ghhghg.#%@#^&*()~'); // secret variable
 
-// Constants
-const PORT = 8080;
-const HOST = '0.0.0.0';
+var db = mongojs('mongodb://database/local', ['user', 'personalInfo']);
 
-// App
-const app = express();
-
-app.use(function (req, res, done) {
-    if (req.query.user === 'vamsee' && req.query.pwd === 'pwd')
-        done();
-    else
-        res.send('u r not authonticated\n');
-});
-app.get('/', function (req, res) {
-    res.send('Hello world\n');
+db.on('error', function (err) {
+    console.log('database error', err);
 });
 
-app.listen(PORT, HOST);
-console.log('Running on http://%s:%d', HOST, PORT);
+db.on('connect', function () {
+    console.log('database connected');
+});
+
+app.use(morgon('dev'));
+app.use(bodyparser.json());
+app.use(function (req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET,PUT,DELETE,POST,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+});
+
+app.use(express.static('../dist/app1'));
+
+
+app.post('/createUser', function (req, res) {
+    console.log('create user');
+    db.user.insert(req.body, function (err, data) {
+        res.json(data);
+    });
+});
+
+app.post('/loginUser', function (req, res) {
+    console.log('login user', req.body);
+    db.user.findOne({'username': req.body.username, 'pwd': req.body.pwd}, {'pwd': 0}, function (err, data) {
+        if (data) {
+            var token = jwt.sign(data, app.get('secretKey'), {
+                expiresIn: 86400 // expires in 24 hours
+            });
+            var payload = data;
+            payload.token = token;
+            // return the information including token as JSON
+            return res.json({
+                success: true,
+                message: 'Enjoy your token!',
+                data: payload
+            });
+        }
+        res.status(403).json({
+            message: 'invalid credentials',
+        });
+    });
+});
+
+// route middleware to verify a token
+app.use(function (req, res, next) {
+
+    // check header or url parameters or post parameters for token
+    var token = req.body.token || req.query.token || req.headers['x-access-token'];
+
+    // decode token
+    if (token) {
+
+        // verifies secret and checks exp
+        jwt.verify(token, app.get('secretKey'), function (err, decoded) {
+            if (err) {
+                return res.json({success: false, message: 'Failed to authenticate token.'});
+            } else {
+                // if everything is good, save to request for use in other routes
+                req.decoded = decoded;
+                next();
+            }
+        });
+
+    } else {
+
+        // if there is no token
+        // return an error
+        return res.status(403).send({
+            success: false,
+            message: 'No token provided.'
+        });
+
+    }
+});
+
+app.post('/CreatePersonalInfo', function (req, res) {
+    delete req.body.token;
+    db.personalInfo.insert(req.body, function (err, data) {
+        res.json(data);
+    });
+});
+
+app.post('/GetPersonalInfo', function (req, res) {
+    db.personalInfo.findOne({'userId': req.body.userId}, function (err, data) {
+        res.json(data);
+    });
+});
+
+app.listen(9000);
+console.log('server running on PORT No:-', 9000);

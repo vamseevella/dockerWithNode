@@ -1,13 +1,21 @@
 {
-  "name": "docker_web_app",
+  "name": "server",
   "version": "1.0.0",
-  "description": "Node.js on Docker",
-  "author": "First Last <first.last@example.com>",
+  "description": "nothing",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server"
   },
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "express": "^4.16.1"
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.18.2",
+    "cors": "^2.8.4",
+    "express": "^4.16.3",
+    "jsonwebtoken": "^8.2.1",
+    "mongojs": "^2.5.0",
+    "morgan": "^1.9.0"
   }
 }
